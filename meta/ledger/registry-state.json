@@ -10,6 +10,10 @@
     "builders/narrative-logic-compiler/contract.json": "a0f0431089695ab11f63bda4c2303504f5c56d87384092a805fc4f4b6684fa8e",
     "builders/narrative-logic-compiler/foreshadow-tracker.js": "82062e5534d43b92386fb23de31c68338e4d9cbbc66cd3c91f44f8bff4487a64",
     "builders/narrative-logic-compiler/guardrail-evaluator.js": "7664961b4ca4ee611124e5ecfaf3a4e7e3db40f77e2417b164fd6c988ce5f201",
-    "builders/narrative-logic-compiler/index.js": "f6970e5e112d43cbeff2368c3f908704f29f40e167fb4bcc817ff83e8401ed5b"
+    "builders/narrative-logic-compiler/index.js": "f6970e5e112d43cbeff2368c3f908704f29f40e167fb4bcc817ff83e8401ed5b",
+    "builders/runtime-orchestrator/context-assembler.js": "3c82f2997508cd6c689e0546e55d9999400ff8d098282b8cbfe3c64de5858952",
+    "builders/runtime-orchestrator/contract.json": "c8acbecf0826492e2dc685049f59b95863f99df92be019935db942e562391821",
+    "builders/runtime-orchestrator/index.js": "259f46c50a5b3e36eec2ea3c219b7f249551e74695f6bffb88ce7a697457f440",
+    "builders/runtime-orchestrator/simulation-tick.js": "d9447ff9d30631a2e3c9deb82de5c4d6a829a1c12121d1666e19346452321ca6"
   }
 }

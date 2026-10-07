@@ -1,0 +1,33 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "runtime-orchestrator",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "씬 단위 시뮬레이션 틱 연산, 인물 물리 상태 갱신, 동적 컨텍스트 패킷 조립 및 상태 변화(Delta) 커밋을 지휘한다.",
+    "target_files": [
+      "builders/runtime-orchestrator/index.js",
+      "builders/runtime-orchestrator/context-assembler.js",
+      "builders/runtime-orchestrator/simulation-tick.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "stepTick(sceneDelta)": "씬 종료 후 발생한 상태 변동 내역(위치 변경, 부상, 언급된 복선 등)",
+      "assemblePromptContext(sceneSetup)": "이번 씬에 참여하는 인물 ID 목록과 발생 장소 ID"
+    },
+    "outputs": {
+      "promptPacket": "{ systemContext: string, characters: object[], location: object, activeForeshadows: object[] }",
+      "simulationState": "{ currentSceneIndex: number, elapsedHours: number, worldState: object }"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [
+      "builders/schema-factory",
+      "builders/world-graph-builder",
+      "builders/narrative-logic-compiler"
+    ],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-07T12:45:21.317Z"
+}
