@@ -1,0 +1,26 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "schema-factory",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "소설 세계관에 필요한 인물, 공간 노드, 복선 카드의 정형 데이터 스키마를 정의하고 유효성을 검증한다.",
+    "target_files": [
+      "builders/schema-factory/index.js",
+      "builders/schema-factory/schemas.json"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "validate(type, data)": "type은 'character' | 'location' | 'foreshadow', data는 검증할 대상 객체"
+    },
+    "outputs": {
+      "result": "{ valid: boolean, errors: string[] }"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-07T12:36:23.908Z"
+}
