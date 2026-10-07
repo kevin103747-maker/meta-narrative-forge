@@ -1,0 +1,73 @@
+{
+  "character": {
+    "required": ["id", "name", "role", "current_location", "physical", "psychological"],
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "role": { "type": "string", "enum": ["protagonist", "antagonist", "supporting", "extra"] },
+      "current_location": { "type": "string" },
+      "physical": {
+        "type": "object",
+        "required": ["hp", "hunger", "stamina"],
+        "properties": {
+          "hp": { "type": "number", "min": 0, "max": 100 },
+          "hunger": { "type": "number", "min": 0, "max": 100 },
+          "stamina": { "type": "number", "min": 0, "max": 100 },
+          "injuries": { "type": "array" },
+          "inventory": { "type": "array" }
+        }
+      },
+      "psychological": {
+        "type": "object",
+        "required": ["dominant_emotion", "stress"],
+        "properties": {
+          "dominant_emotion": { "type": "string" },
+          "stress": { "type": "number", "min": 0, "max": 100 },
+          "trauma_triggers": { "type": "array" },
+          "current_goal": { "type": "string" }
+        }
+      },
+      "relations": { "type": "object" },
+      "known_facts": { "type": "array" }
+    }
+  },
+  "location": {
+    "required": ["id", "name", "zone_type", "connected_edges"],
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "zone_type": { "type": "string", "enum": ["settlement", "wilderness", "dungeon", "transit", "sacred"] },
+      "attributes": { "type": "array" },
+      "connected_edges": {
+        "type": "array",
+        "items": {
+          "required": ["target_node_id", "travel_cost_hours", "danger_level"],
+          "properties": {
+            "target_node_id": { "type": "string" },
+            "travel_cost_hours": { "type": "number", "min": 0 },
+            "danger_level": { "type": "number", "min": 1, "max": 5 },
+            "requirements": { "type": "array" }
+          }
+        }
+      }
+    }
+  },
+  "foreshadow": {
+    "required": ["id", "title", "status", "planted_scene", "neglect_count"],
+    "properties": {
+      "id": { "type": "string" },
+      "title": { "type": "string" },
+      "status": { "type": "string", "enum": ["planted", "dormant", "triggered", "resolved"] },
+      "planted_scene": { "type": "string" },
+      "neglect_count": { "type": "number", "min": 0 },
+      "max_neglect_threshold": { "type": "number", "min": 1 },
+      "target_milestone": {
+        "type": "object",
+        "properties": {
+          "required_location": { "type": "string" },
+          "involved_characters": { "type": "array" }
+        }
+      }
+    }
+  }
+}
