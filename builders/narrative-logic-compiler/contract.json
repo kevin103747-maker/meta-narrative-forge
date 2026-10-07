@@ -1,0 +1,31 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "narrative-logic-compiler",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "복선의 수명 주기 관리, 방치 감시, 역방향 복선 경유지 추천 및 탈선 감지(유리관 미로) 로직을 컴파일한다.",
+    "target_files": [
+      "builders/narrative-logic-compiler/index.js",
+      "builders/narrative-logic-compiler/foreshadow-tracker.js",
+      "builders/narrative-logic-compiler/guardrail-evaluator.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "registerForeshadow(data)": "schema-factory의 foreshadow 스키마를 만족하는 복선 객체",
+      "evaluateSceneReadiness(currentContext)": "현재 인물 위치, 경과 씬 수, 활성 복선 목록"
+    },
+    "outputs": {
+      "recommendations": "{ urgentForeshadows: object[], guardrailWarnings: object[] }"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [
+      "builders/schema-factory",
+      "builders/world-graph-builder"
+    ],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-07T12:42:51.113Z"
+}

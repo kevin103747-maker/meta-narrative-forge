@@ -6,6 +6,10 @@
     "builders/schema-factory/schemas.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "builders/world-graph-builder/contract.json": "c63c984a3205cfa1ef3f5b5f8bdf674b14cf1ace1b617e8310e16c8c5b9d067e",
     "builders/world-graph-builder/index.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "builders/world-graph-builder/pathfinder.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "builders/world-graph-builder/pathfinder.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "builders/narrative-logic-compiler/contract.json": "a0f0431089695ab11f63bda4c2303504f5c56d87384092a805fc4f4b6684fa8e",
+    "builders/narrative-logic-compiler/foreshadow-tracker.js": "82062e5534d43b92386fb23de31c68338e4d9cbbc66cd3c91f44f8bff4487a64",
+    "builders/narrative-logic-compiler/guardrail-evaluator.js": "7664961b4ca4ee611124e5ecfaf3a4e7e3db40f77e2417b164fd6c988ce5f201",
+    "builders/narrative-logic-compiler/index.js": "f6970e5e112d43cbeff2368c3f908704f29f40e167fb4bcc817ff83e8401ed5b"
   }
 }
