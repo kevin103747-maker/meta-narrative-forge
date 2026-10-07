@@ -3,6 +3,9 @@
   "frozen_modules": {
     "builders/schema-factory/contract.json": "975fed1f1062516d518c4e8ac408e205f10ac3076cb8aef0374f6ec4c811e101",
     "builders/schema-factory/index.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "builders/schema-factory/schemas.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "builders/schema-factory/schemas.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "builders/world-graph-builder/contract.json": "c63c984a3205cfa1ef3f5b5f8bdf674b14cf1ace1b617e8310e16c8c5b9d067e",
+    "builders/world-graph-builder/index.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "builders/world-graph-builder/pathfinder.js": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   }
 }

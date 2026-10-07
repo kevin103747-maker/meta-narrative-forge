@@ -1,0 +1,29 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "world-graph-builder",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "노드-엣지 기반의 세계관 전술 지도를 생성하고 최단 경로, 이동 시간, 지리적 개연성을 연산한다.",
+    "target_files": [
+      "builders/world-graph-builder/index.js",
+      "builders/world-graph-builder/pathfinder.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "addLocation(locationData)": "schema-factory의 location 스키마를 만족하는 장소 객체",
+      "findPath(fromId, toId)": "출발 노드 ID와 도착 노드 ID"
+    },
+    "outputs": {
+      "pathResult": "{ path: string[], totalHours: number, maxDanger: number, possible: boolean }"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [
+      "builders/schema-factory"
+    ],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-07T12:38:41.950Z"
+}
