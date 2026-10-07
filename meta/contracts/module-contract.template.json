@@ -1,0 +1,25 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "example-builder",
+  "version": "0.1.0",
+  "status": "DRAFT",
+  "scope": {
+    "purpose": "이 모듈이 존재하는 단 하나의 명확한 목적",
+    "target_files": [
+      "builders/example-builder/index.js",
+      "builders/example-builder/types.json"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "description": "외부에서 전달받아야 할 데이터 규격 및 경로"
+    },
+    "outputs": {
+      "description": "이 모듈이 최종적으로 반환하거나 생성해야 할 데이터 규격"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [],
+    "allowed_external_pkgs": []
+  }
+}

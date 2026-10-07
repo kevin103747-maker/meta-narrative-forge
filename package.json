@@ -1,0 +1,8 @@
+{
+  "name": "meta-narrative-forge",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "audit": "node meta/scripts/audit.js"
+  }
+}
