@@ -227,4 +227,90 @@ promiseOrch.registerContextProvider('sneaky-promise', () => Promise.resolve({ li
 expectThrow('Promise 반환', () => promiseOrch.assemblePromptContext(HERO_SETUP), TypeError, 'Promise');
 console.log('   ✅ 거부 경로 7종: 중복 이름, 이름 형식, async, maxChars 하한, 입력 변조, 반환 형식, Promise 반환');
 
+// 10. [T3] conspiracy-truth-ledger: 진실/믿음/소문 분리, 누수 방지, 봉인 해제 검증
+import { TruthLedger } from '../builders/conspiracy-truth-ledger/index.js'; // ESM import 는 모듈 최상단으로 호이스팅됨
+
+console.log('\n🕯️ 9. [T3] 진실 원장: 소문 전파, 누수 방지, 봉인 해제 검증...');
+
+const TRUTH = '아버지는 제단의 봉인을 지키기 위해 스스로 돌이 되었다';
+const RUMOR_TAVERN = '아버지는 빚을 지고 도망쳤다';
+
+function buildLedgerScenario() {
+  const lc = new NarrativeLogicCompiler(world);
+  lc.registerForeshadow({
+    id: 'gun_001_pendant',
+    title: '피 묻은 가문의 펜던트',
+    status: 'planted',
+    planted_scene: 'scene_001',
+    neglect_count: 0,
+    max_neglect_threshold: 2,
+    target_milestone: { required_location: 'loc_ancient_altar', involved_characters: ['char_hero_01'] }
+  });
+  const ledger = new TruthLedger({ worldGraph: world, logicCompiler: lc });
+  ledger.registerFact({
+    id: 'fact_father_fate',
+    truth: TRUTH,
+    rumor_variants: ['아버지가 제단에서 무언가를 지키다 사라졌다', '아버지가 숲에서 짐승에게 당했다', RUMOR_TAVERN],
+    seal: { all: [
+      { type: 'location', value: 'loc_ancient_altar' },
+      { type: 'present', value: ['char_hero_01'] },
+      { type: 'foreshadow_status', id: 'gun_001_pendant', statuses: ['triggered', 'resolved'] }
+    ] }
+  });
+  const reached = ledger.spreadRumor({ factId: 'fact_father_fate', originLocationId: 'loc_ancient_altar', elapsedHours: 7 });
+  ledger.hearRumors('char_hero_01', 'loc_tavern', 3);
+  ledger.hearRumors('char_rogue_02', 'loc_tavern', 3);
+
+  const o = new RuntimeOrchestrator({ worldGraph: world, logicCompiler: lc });
+  o.registerCharacter(structuredClone(orchestrator.getCharacter('char_hero_01')));
+  o.registerCharacter(structuredClone(orchestrator.getCharacter('char_rogue_02')));
+  o.registerContextProvider('truth-ledger', ledger.createContextProvider(), { maxChars: 240 });
+  return { lc, ledger, reached, o };
+}
+
+// 9-1. 소문 전파 + 누수 방지 + 결정론
+const s = buildLedgerScenario();
+assert.deepEqual(
+  s.reached.map(r => [r.locationId, r.hops, r.variant_index]),
+  [['loc_tavern', 2, 2], ['loc_forest_entrance', 1, 1], ['loc_ancient_altar', 0, 0]]
+);
+const tavernPacket = s.o.assemblePromptContext(FULL_SETUP);
+assert.deepEqual(tavernPacket.extensions['truth-ledger'].lines, [
+  `에단 믿음: "${RUMOR_TAVERN}" (확신 40, 소문)`,
+  `로웬 믿음: "${RUMOR_TAVERN}" (확신 40, 소문)`
+]);
+assert.ok(!JSON.stringify(tavernPacket).includes(TRUTH), '봉인된 진실이 패킷에 새면 안 됩니다');
+assert.ok(!JSON.stringify(tavernPacket).includes('is_true'), '참/거짓 판정이 패킷에 새면 안 됩니다');
+const tavernAgain = buildLedgerScenario().o.assemblePromptContext(FULL_SETUP);
+assert.equal(JSON.stringify(tavernAgain), JSON.stringify(tavernPacket), '같은 시나리오는 같은 패킷 (결정론)');
+console.log('   ✅ 소문 전파: 제단(원본)→숲 어귀(1홉, 변형 1)→주점(2홉, 변형 2), 주점 패킷엔 왜곡된 소문만, 진실 누수 0, 결정론 동일');
+
+// 9-2. 봉인 해제 (복선 미발동 → 거부, triggered → 해제)
+const ALTAR_CTX = { sceneIndex: 4, locationId: 'loc_ancient_altar', presentCharacterIds: ['char_hero_01'] };
+const pending = s.ledger.evaluateSeals(ALTAR_CTX);
+assert.equal(pending.length, 1);
+assert.equal(pending[0].satisfied, false);
+assert.equal(pending[0].unmet.length, 1, '장소·동석은 충족, 복선 상태만 미충족이어야 합니다');
+expectThrow('봉인 미충족 해제', () => s.ledger.unseal('fact_father_fate', ALTAR_CTX), Error, '봉인 조건 미충족');
+expectThrow('봉인 진실 직접 주입', () => s.ledger.plantBelief('char_rogue_02', {
+  fact_id: 'fact_father_fate', version: 'truth', confidence: 90, source: 'told', scene: 4
+}), Error, '봉인된 진실');
+
+s.lc.transitionStatus('gun_001_pendant', 'triggered');
+assert.deepEqual(s.ledger.unseal('fact_father_fate', ALTAR_CTX).revealedTo, ['char_hero_01']);
+const altarPacket = s.o.assemblePromptContext({ involvedCharacterIds: ['char_hero_01', 'char_rogue_02'], locationId: 'loc_ancient_altar' });
+assert.deepEqual(altarPacket.extensions['truth-ledger'].lines, [
+  `에단 믿음: "${TRUTH}" (확신 100, 확인)`,
+  `로웬 믿음: "${RUMOR_TAVERN}" (확신 40, 소문)`
+]);
+assert.ok(!JSON.stringify(altarPacket).includes('is_true'));
+console.log('   ✅ 봉인 해제: 복선 미발동 시 거부 → triggered 후 해제, 에단만 진실 확인(100), 로웬은 소문 유지');
+
+// 9-3. 거부 경로
+expectThrow('중복 fact', () => s.ledger.registerFact({ id: 'fact_father_fate', truth: 'x', rumor_variants: ['y'] }), Error, '이미 등록된');
+expectThrow('줄바꿈 금지', () => s.ledger.registerFact({ id: 'fact_newline', truth: '첫 줄\n둘째 줄', rumor_variants: ['y'] }), TypeError, '줄바꿈');
+expectThrow('그래프 없는 전파', () => new TruthLedger().spreadRumor({ factId: 'x', originLocationId: 'loc_tavern', elapsedHours: 1 }), Error, 'worldGraph');
+expectThrow('이중 해제', () => s.ledger.unseal('fact_father_fate', ALTAR_CTX), Error, '이미 해제');
+console.log('   ✅ 거부 경로 6종: 봉인 미충족 해제, 봉인 진실 직접 주입, 중복 fact, 줄바꿈, 그래프 없는 전파, 이중 해제');
+
 console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 4대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');

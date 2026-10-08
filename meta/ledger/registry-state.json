@@ -22,7 +22,12 @@
     "builders/runtime-orchestrator/context-assembler.js": "b5ec295566984bb739b6164b95afdc4b47493c1baf6ab339b65d662c120cfe6a",
     "builders/runtime-orchestrator/index.js": "630f86a9fe8bc8a51b0570fb017c2426ca0bd856581b32aee5e4429f4daeb1e3",
     "builders/runtime-orchestrator/simulation-tick.js": "0de6a673cfe41d51463338e5919b5c6668b91badf72919401659bc5bdb0b4d4d",
-    "builders/runtime-orchestrator/contract.json": "3ea5e363fbd84640b02589424bc7345af2921800d8128736a8cc1eafd4a49312"
+    "builders/runtime-orchestrator/contract.json": "3ea5e363fbd84640b02589424bc7345af2921800d8128736a8cc1eafd4a49312",
+    "builders/conspiracy-truth-ledger/belief-propagator.js": "fd90fa0c8ffa7c5490b52648c6eb901d8cdb991db8bd60c840589954214a82df",
+    "builders/conspiracy-truth-ledger/fact-registry.js": "ced5766655e782a917d1090da668e0d08fefe6f3eafad5c0e0c2bbf2f116cc15",
+    "builders/conspiracy-truth-ledger/index.js": "a7d8085bbea0211cff1d4d6fa5b186765c7508cf01e8350c5131abf124ffea29",
+    "builders/conspiracy-truth-ledger/seal-evaluator.js": "1452cc6ac32e3e4a400e68be7df9dfbf100b55d5125f184b2a50020eeeca1c78",
+    "builders/conspiracy-truth-ledger/contract.json": "3057c97b46a7c0999f51443c02c83dbd82fb946ade3867f0df06f30fabd93375"
   },
   "superseded_modules": [
     {

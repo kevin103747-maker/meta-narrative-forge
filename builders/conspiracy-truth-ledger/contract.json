@@ -1,0 +1,38 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "conspiracy-truth-ledger",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "작가만 아는 진실(Fact), 인물별 믿음(Belief), 그래프 거리에 따라 왜곡되는 소문(Rumor)을 분리 관리하고, 코드 조건식으로만 진실의 봉인을 해제한다. 씬 패킷에는 등장 인물이 믿는 내용만 주입한다.",
+    "target_files": [
+      "builders/conspiracy-truth-ledger/index.js",
+      "builders/conspiracy-truth-ledger/fact-registry.js",
+      "builders/conspiracy-truth-ledger/belief-propagator.js",
+      "builders/conspiracy-truth-ledger/seal-evaluator.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "new TruthLedger({ worldGraph, logicCompiler })": "주입식 의존: worldGraph(getLocation, findPath, exportGraph), logicCompiler(exportState)",
+      "registerFact(fact)": "{ id: snake_case, truth: string, rumor_variants: string[] (왜곡 순), seal?: { all: [scene_at_least|location|present|foreshadow_status 조건] } }, 문자열은 줄바꿈 금지, 120자 이하",
+      "plantBelief(characterId, belief)": "{ fact_id, version: 'truth'|변형본 인덱스, confidence: 0~100, source: witness|told, scene }, 봉인된 진실은 거부",
+      "spreadRumor(params)": "{ factId, originLocationId, elapsedHours, startVariant? } — travel_cost_hours 이내 장소에 홉 수만큼 왜곡된 변형본 배치",
+      "hearRumors(characterId, locationId, sceneIndex)": "장소의 소문을 믿음으로 흡수, 확신도 = max(10, 70 - 15 x 홉)",
+      "unseal(factId, ctx)": "{ sceneIndex, locationId, presentCharacterIds } 조건 충족 시에만 해제, 동석 인물에게 진실(확신 100) 부여"
+    },
+    "outputs": {
+      "evaluateSeals(ctx)": "[{ factId, satisfied, unmet: string[] }] — 판정만, 상태 변경 없음",
+      "createContextProvider()": "동기 함수 (input) -> { lines: ['<이름> 믿음: \"<내용>\" (확신 n, 출처)'], data: { beliefCount } } — truth/is_true 미포함, 권장 등록: registerContextProvider('truth-ledger', fn, { maxChars: 240 })",
+      "getBeliefs(characterId)": "작가용 사본 (is_true 포함), 씬 패킷 주입 금지"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [
+      "builders/world-graph-builder",
+      "builders/narrative-logic-compiler"
+    ],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-08T05:38:13.061Z"
+}
