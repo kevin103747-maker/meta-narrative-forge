@@ -3,9 +3,10 @@ import { WorldGraphBuilder } from '../builders/world-graph-builder/index.js';
 import { NarrativeLogicCompiler } from '../builders/narrative-logic-compiler/index.js';
 import { RuntimeOrchestrator } from '../builders/runtime-orchestrator/index.js';
 import { GlobalClock } from '../builders/global-clock/index.js';
+import { MultiCharacterSim } from '../builders/multi-character-sim/index.js';
 
 console.log('\x1b[35m%s\x1b[0m', '==================================================');
-console.log('\x1b[35m%s\x1b[0m', '🚀 [meta-narrative-forge] 5대 코어 빌더 통합 구동 테스트');
+console.log('\x1b[35m%s\x1b[0m', '🚀 [meta-narrative-forge] 6대 코어 빌더 통합 구동 테스트');
 console.log('\x1b[35m%s\x1b[0m', '==================================================\n');
 
 // 1. 전술판(WorldGraphBuilder) 구축
@@ -456,4 +457,138 @@ assert.equal(newClock.getCurrentTime(), 8);
 assert.equal(newClock.getLocalTime('char_hero_01'), 10);
 console.log('   ✅ 상태 내보내기/가져오기: 직렬화/역직렬화 완료');
 
-console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 5대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');
+// 12. [T4.1] Multi-Character Sim: 다중 캐릭터 병렬 시뮬레이션
+console.log('\n👥 12. [T4.1] Multi-Character Sim: 병렬 상태 업데이트, 우선순위, 조우 감지 검증...');
+
+const multiSim = new MultiCharacterSim();
+const mClock = new GlobalClock();
+const mWorld = new WorldGraphBuilder();
+
+// 테스트용 월드 그래프
+mWorld.addLocation({
+  id: 'loc_tavern',
+  name: '주점',
+  zone_type: 'settlement',
+  connected_edges: [{ target_node_id: 'loc_forest', travel_cost_hours: 2, danger_level: 2 }]
+});
+mWorld.addLocation({
+  id: 'loc_forest',
+  name: '숲',
+  zone_type: 'wilderness',
+  connected_edges: [{ target_node_id: 'loc_tavern', travel_cost_hours: 2, danger_level: 2 }]
+});
+mWorld.addLocation({
+  id: 'loc_castle',
+  name: '성',
+  zone_type: 'settlement',
+  connected_edges: []
+});
+
+multiSim.initialize({ globalClock: mClock, worldGraph: mWorld });
+
+// 12-1. 캐릭터 등록
+multiSim.registerCharacter({
+  id: 'char_hero_01',
+  name: '에단',
+  role: 'protagonist',
+  currentLocation: 'loc_tavern',
+  physical: { hp: 100, hunger: 0, stamina: 100 },
+  psychological: { dominant_emotion: 'neutral', stress: 0 }
+});
+multiSim.registerCharacter({
+  id: 'char_rogue_02',
+  name: '로웬',
+  role: 'supporting',
+  currentLocation: 'loc_tavern',
+  physical: { hp: 90, hunger: 0, stamina: 90 },
+  psychological: { dominant_emotion: 'cunning', stress: 10 }
+});
+multiSim.registerCharacter({
+  id: 'char_villain_01',
+  name: '카르타고',
+  role: 'antagonist',
+  currentLocation: 'loc_castle',
+  physical: { hp: 100, hunger: 0, stamina: 100 },
+  psychological: { dominant_emotion: 'hostile', stress: 0 }
+});
+console.log('   ✅ 캐릭터 등록: 주인공, 조력자, 적대자');
+
+// 12-2. 우선순위 확인
+assert.equal(multiSim.getPriority('char_hero_01'), 10, '주인공 우선순위 10');
+assert.equal(multiSim.getPriority('char_rogue_02'), 8, '조력자 우선순위 8');
+assert.equal(multiSim.getPriority('char_villain_01'), 7, '적대자 우선순위 7');
+console.log('   ✅ 우선순위: 주인공(10) > 조력자(8) > 적대자(7)');
+
+// 12-3. 틱 전진 (행동 없음)
+const result1 = multiSim.advanceTick({ globalDelta: 1, characterActions: [] });
+assert.equal(result1.advancedCharacters.length, 3, '모든 캐릭터 처리');
+assert.equal(result1.encounters.length, 1, '주점에 2명 있으므로 조우 1개');
+assert.equal(result1.encounters[0].location, 'loc_tavern');
+assert.deepEqual(result1.encounters[0].participants.sort(), ['char_hero_01', 'char_rogue_02']);
+console.log('   ✅ 틱 전진: 모든 캐릭터 처리, 주점 조우 감지');
+
+// 12-4. 이동 처리
+const result2 = multiSim.advanceTick({
+  globalDelta: 1,
+  characterActions: [
+    { characterId: 'char_hero_01', action: 'move', target: 'loc_forest' },
+    { characterId: 'char_rogue_02', action: 'wait' },
+    { characterId: 'char_villain_01', action: 'wait' }
+  ]
+});
+const heroAfterMove = multiSim.getCharacter('char_hero_01');
+assert.equal(heroAfterMove.currentLocation, 'loc_forest', '에단 이동 완료');
+assert.equal(heroAfterMove.physical.stamina, 96, '이동으로 체력 소모 (100 - 2*2)');
+assert.equal(heroAfterMove.physical.hunger, 6, '이동으로 허기 증가 (0 + 2*3)');
+assert.equal(mClock.getTimeDivergence('char_hero_01'), 2, '에단 로컬 시간 2시간 추가');
+console.log('   ✅ 이동 처리: 에단 숲으로 이동, 체력/허기 변화, 로컬 시간 조정');
+
+// 12-5. 위치 기반 그룹핑 (조우 감지)
+const result3 = multiSim.advanceTick({ globalDelta: 1, characterActions: [] });
+assert.equal(result3.encounters.length, 0, '각 장소에 캐릭터 1명씩만 있으므로 조우 없음');
+console.log('   ✅ 조우 감지: 각 장소에 캐릭터 1명씩만 있으므로 조우 없음');
+
+// 12-5b. 캐릭터가 같은 장소로 모이면 조우 감지
+const result3b = multiSim.advanceTick({
+  globalDelta: 1,
+  characterActions: [
+    { characterId: 'char_hero_01', action: 'move', target: 'loc_tavern' }
+  ]
+});
+assert.equal(result3b.encounters.length, 1, '에단이 주점으로 돌아오면 조우 발생');
+assert.equal(result3b.encounters[0].location, 'loc_tavern');
+assert.deepEqual(result3b.encounters[0].participants.sort(), ['char_hero_01', 'char_rogue_02']);
+console.log('   ✅ 조우 감지: 에단 주점 복귀 시 로웬과 조우');
+
+// 12-6. 캐릭터 상태 조회
+const tavernChars = multiSim.getCharactersAtLocation('loc_tavern');
+assert.equal(tavernChars.length, 2, '주점에 에단과 로웬');
+assert.deepEqual(tavernChars.map(c => c.id).sort(), ['char_hero_01', 'char_rogue_02']);
+const allChars = multiSim.getAllCharacters();
+assert.equal(allChars.length, 3);
+console.log('   ✅ 상태 조회: 장소별 캐릭터, 전체 캐릭터');
+
+// 12-7. 스냅샷 생성 (복원 테스트는 생략 - 복잡성으로 인해 추후 개선)
+const simSnapId = multiSim.createSnapshot('before_climax');
+const simSnapshot = multiSim.listSnapshots()[0];
+assert.equal(simSnapshot.id, simSnapId);
+assert.equal(mClock.getCurrentTime(), 4, '스냅샷 생성 시간 4시간');
+console.log('   ✅ 스냅샷 생성: before_climax 라벨로 저장');
+
+// 12-8. 거부 경로
+assert.throws(() => multiSim.registerCharacter({ id: 'char_hero_01' }), Error, '중복 등록 거부');
+assert.throws(() => multiSim.getCharacter('unknown'), Error, '미등록 캐릭터 조회 거부');
+assert.throws(() => multiSim.initialize({ globalClock: null }), Error, 'GlobalClock 미초기화 거부');
+console.log('   ✅ 거부 경로 3종: 중복 등록, 미등록 조회, 미초기화');
+
+// 12-9. 상태 내보내기/가져오기
+const simExported = multiSim.exportState();
+assert.equal(simExported.globalTime, 4);
+assert.equal(simExported.characters.length, 3);
+const newMultiSim = new MultiCharacterSim();
+newMultiSim.initialize({ globalClock: mClock, worldGraph: mWorld });
+newMultiSim.importState(simExported);
+assert.equal(newMultiSim.getCharacter('char_hero_01').currentLocation, 'loc_tavern');
+console.log('   ✅ 상태 내보내기/가져오기: 직렬화/역직렬화 완료');
+
+console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 6대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');

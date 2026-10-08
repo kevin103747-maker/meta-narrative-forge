@@ -1,0 +1,37 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "multi-character-sim",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "다중 캐릭터 병렬 시뮬레이션 코어. 여러 캐릭터의 상태를 동시에 업데이트하고, 위치 기반 그룹핑으로 상호작용을 처리하며, 캐릭터 우선순위 큐로 처리 순서를 결정한다.",
+    "target_files": [
+      "builders/multi-character-sim/index.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "initialize(config)": "{ globalClock: GlobalClock, worldGraph: WorldGraphBuilder } - 시뮬레이션 초기화",
+      "registerCharacter(character)": "{ id, name, role, currentLocation, physical, psychological, relations } - 캐릭터 등록",
+      "advanceTick(params)": "{ globalDelta: number, characterActions: Array<{characterId, action, target, ...}> } - 한 틱 전진",
+      "getCharacter(characterId)": "캐릭터 상태 반환",
+      "getCharactersAtLocation(locationId)": "해당 장소에 있는 캐릭터 목록 반환",
+      "getAllCharacters()": "모든 캐릭터 상태 반환",
+      "createSnapshot(label)": "현재 시뮬레이션 상태 스냅샷 생성",
+      "restoreSnapshot(snapshotId)": "스냅샷으로 상태 복원"
+    },
+    "outputs": {
+      "tickResult": "{ advancedCharacters: [], encounters: [], warnings: [] } - 틱 전진 결과",
+      "characterState": "{ id, name, currentLocation, physical, psychological, ... } - 캐릭터 상태",
+      "encounter": "{ type, participants, location, timestamp } - 캐릭터 조우 이벤트"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [
+      "builders/global-clock",
+      "builders/world-graph-builder"
+    ],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-08T06:52:56.147Z"
+}

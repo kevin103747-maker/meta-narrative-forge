@@ -29,7 +29,9 @@
     "builders/runtime-orchestrator/simulation-tick.js": "0de6a673cfe41d51463338e5919b5c6668b91badf72919401659bc5bdb0b4d4d",
     "builders/runtime-orchestrator/contract.json": "1dc66255851c3f883b7726aed0eb3f91e2e57e8751fb2426f761211e84a83256",
     "builders/global-clock/index.js": "3d63357e8970cfa4be679c4e22e3aadf3dde0c80c40468df3cc097dc17cbb96d",
-    "builders/global-clock/contract.json": "c3c064c5da68776c3284ec823e817736edfec3ce645ca4e2765349f470df295c"
+    "builders/global-clock/contract.json": "c3c064c5da68776c3284ec823e817736edfec3ce645ca4e2765349f470df295c",
+    "builders/multi-character-sim/index.js": "8a5b6c6602cb3f8779d79d32af4cfd4835f4ca118b0ab05722bf8cded1e07b0d",
+    "builders/multi-character-sim/contract.json": "eb01f754183ce2d2c43e714667bf8d52fccb3d095fcd5c5daa318aea3cdcc8b0"
   },
   "superseded_modules": [
     {
