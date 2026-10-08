@@ -1,7 +1,7 @@
 {
   "system_constitution_hash": "e3bc9c0b59dc4309818ff3737d9f7e920a5dba72820bb5e693e0d6ec7939ba00",
   "frozen_modules": {
-    "builders/schema-factory/contract.json": "5be7d26d86ecfc3b0a68a1896bed183d2340477db1db7a0d3f91a322fe6665d0",
+    "builders/schema-factory/contract.json": "20bcba512341f50f7c5a2674bbe37f2af259a986ebe2050ac6e00dc237000ee8",
     "builders/schema-factory/index.js": "6ef4b97259bac63683bbcae4440cf2454f206c1b98dacd355f0bfa0f4b503c47",
     "builders/schema-factory/schemas.json": "399b0d7beff53101ad35f46fe457e3346a6ddf7e70d0713862dca1eb648a2474",
     "builders/world-graph-builder/contract.json": "b2436056111240f77a4279142de7712e22958dd419edb4b2cdbab31e3f1b7450",
