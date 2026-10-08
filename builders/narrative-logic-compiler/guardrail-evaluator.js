@@ -51,6 +51,16 @@ export class GuardrailEvaluator {
       }
     }
 
+    // 3. 일방통행 탈선 감지: 목적지에서 현재 위치로 복귀 가능 여부
+    const returnPath = worldGraph.findPath(plannedDestination, currentLocation);
+    if (!returnPath.possible) {
+      warnings.push({
+        type: 'ONE_WAY_TRAP',
+        severity: 'high',
+        message: `목적지 '${plannedDestination}'에서 현재 위치 '${currentLocation}'로 복귀할 수 있는 경로가 없습니다. 일방통행 트랩입니다.`
+      });
+    }
+
     return {
       divergent: warnings.length > 0,
       warnings

@@ -380,13 +380,13 @@ for (const dest of ['g_island', 'g_nowhere']) {
 }
 console.log('   ✅ 도달 불가: 고립된 섬·미등록 장소 모두 UNREACHABLE_DESTINATION(high)');
 
-// 10-5. [알려진 결함] 현재 동작을 고정한다. 코드 수정 시 이 assert 가 실패하므로 테스트도 함께 갱신할 것
+// 10-5. 결함 수정 검증
 const zeroTolerance = judge('g_camp', 0);
-assert.deepEqual(warnTypes(zeroTolerance), [], '[결함 1] 현재는 0 이 || 24 로 치환됨');
+assert.deepEqual(warnTypes(zeroTolerance), ['TRAJECTORY_DIVERGENCE'], '허용치 0 지정 시 우회 경로 경고해야 합니다');
+assert.equal(zeroTolerance.guardrailWarnings[0].addedHours, 10);
 const oneWay = judge('g_cliff');
-assert.deepEqual(warnTypes(oneWay), [], '[결함 2] 현재는 복귀 불가 목적지를 판정하지 않음');
-assert.equal(oneWay.isDivergent, false);
-console.log('\x1b[33m%s\x1b[0m', '   ⚠️ [알려진 결함 1] 허용치 0 지정 불가: maxAllowedDeviationHours 0 이 24 로 치환됨');
-console.log('\x1b[33m%s\x1b[0m', '   ⚠️ [알려진 결함 2] 일방통행 탈선 미감지: 절벽(복귀 경로 없음) 행이 경고 없이 통과됨');
+assert.deepEqual(warnTypes(oneWay), ['ONE_WAY_TRAP'], '일방통행 목적지는 ONE_WAY_TRAP 경고해야 합니다');
+assert.equal(oneWay.isDivergent, true);
+console.log('   ✅ 결함 수정: 허용치 0 지정 가능, 일방통행 탈선 감지(ONE_WAY_TRAP)');
 
 console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 4대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');

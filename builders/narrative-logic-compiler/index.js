@@ -46,7 +46,7 @@ export class NarrativeLogicCompiler {
         currentLocation: context.currentLocation,
         plannedDestination: context.plannedDestination,
         targetMilestoneLocations: milestoneLocations,
-        maxAllowedDeviationHours: context.maxAllowedDeviationHours || 24
+        maxAllowedDeviationHours: context.maxAllowedDeviationHours ?? 24
       });
     }
 

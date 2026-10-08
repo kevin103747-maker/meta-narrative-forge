@@ -1,7 +1,7 @@
 {
   "$schema": "meta/contracts/module-contract.template.json",
   "module_name": "conspiracy-truth-ledger",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "FROZEN",
   "scope": {
     "purpose": "작가만 아는 진실(Fact), 인물별 믿음(Belief), 그래프 거리에 따라 왜곡되는 소문(Rumor)을 분리 관리하고, 코드 조건식으로만 진실의 봉인을 해제한다. 씬 패킷에는 등장 인물이 믿는 내용만 주입한다.",
@@ -34,5 +34,5 @@
     ],
     "allowed_external_pkgs": []
   },
-  "frozen_at": "2026-10-08T05:38:13.061Z"
+  "frozen_at": "2026-10-08T06:37:17.497Z"
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "meta/contracts/module-contract.template.json",
   "module_name": "runtime-orchestrator",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "status": "FROZEN",
   "scope": {
     "purpose": "씬 단위 시뮬레이션 틱 연산, 인물 물리 상태 갱신, 동적 컨텍스트 패킷 조립 및 상태 변화(Delta) 커밋을 지휘한다. v0.2.0: 거시 모듈용 context provider 확장 슬롯 추가.",
@@ -32,5 +32,5 @@
     ],
     "allowed_external_pkgs": []
   },
-  "frozen_at": "2026-10-08T05:19:33.849Z"
+  "frozen_at": "2026-10-08T06:37:20.619Z"
 }

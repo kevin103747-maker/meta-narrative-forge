@@ -1,7 +1,7 @@
 {
   "$schema": "meta/contracts/module-contract.template.json",
   "module_name": "narrative-logic-compiler",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "FROZEN",
   "scope": {
     "purpose": "복선의 수명 주기 관리, 방치 감시, 역방향 복선 경유지 추천 및 탈선 감지(유리관 미로) 로직을 컴파일한다.",
@@ -27,5 +27,5 @@
     ],
     "allowed_external_pkgs": []
   },
-  "frozen_at": "2026-10-07T13:02:30.661Z"
+  "frozen_at": "2026-10-08T06:37:05.705Z"
 }
