@@ -313,4 +313,80 @@ expectThrow('그래프 없는 전파', () => new TruthLedger().spreadRumor({ fac
 expectThrow('이중 해제', () => s.ledger.unseal('fact_father_fate', ALTAR_CTX), Error, '이미 해제');
 console.log('   ✅ 거부 경로 6종: 봉인 미충족 해제, 봉인 진실 직접 주입, 중복 fact, 줄바꿈, 그래프 없는 전파, 이중 해제');
 
+// 11. [T3.5] 유리관 미로 가드레일: 탈선 경고, 도달 불가, 허용치 경계 검증 (별도 그래프)
+console.log('\n🧭 10. [T3.5] 유리관 미로 가드레일 탈선 판정 검증...');
+
+const gEdge = (to, hours) => ({ target_node_id: to, travel_cost_hours: hours, danger_level: 2 });
+const gWorld = new WorldGraphBuilder();
+gWorld.addLocation({ id: 'g_hub', name: '교차로 마을', zone_type: 'settlement',
+  connected_edges: [gEdge('g_altar', 4), gEdge('g_camp', 10), gEdge('g_port', 30), gEdge('g_cliff', 3)] });
+gWorld.addLocation({ id: 'g_altar', name: '봉인의 제단', zone_type: 'sacred', connected_edges: [gEdge('g_hub', 4)] });
+gWorld.addLocation({ id: 'g_camp', name: '사냥꾼 야영지', zone_type: 'wilderness', connected_edges: [gEdge('g_hub', 10)] });
+gWorld.addLocation({ id: 'g_port', name: '먼 항구', zone_type: 'transit', connected_edges: [gEdge('g_hub', 30)] });
+gWorld.addLocation({ id: 'g_cliff', name: '돌아올 수 없는 절벽', zone_type: 'wilderness', connected_edges: [] }); // 일방통행 종점
+gWorld.addLocation({ id: 'g_island', name: '고립된 섬', zone_type: 'dungeon', connected_edges: [] });           // 완전 고립
+
+const gLogic = new NarrativeLogicCompiler(gWorld);
+gLogic.registerForeshadow({
+  id: 'gun_g_relic',
+  title: '제단의 유물',
+  status: 'planted',
+  planted_scene: 'scene_g01',
+  neglect_count: 0,
+  max_neglect_threshold: 1,
+  target_milestone: { required_location: 'g_altar', involved_characters: [] }
+});
+gLogic.tickScene([]); // 1씬 방치 -> 긴급 복선, 제단이 필수 경유지가 됨
+
+const judge = (dest, max) => gLogic.evaluateSceneReadiness({
+  currentLocation: 'g_hub',
+  plannedDestination: dest,
+  ...(max === undefined ? {} : { maxAllowedDeviationHours: max })
+});
+const warnTypes = (r) => r.guardrailWarnings.map(w => w.type);
+
+// 10-1. 기본 궤도: 복선 장소 직행(-4h), 허용치 내 우회(+10h)
+const onTrack = judge('g_altar');
+assert.equal(onTrack.urgentForeshadows.length, 1, '긴급 복선 1개가 경유지를 공급해야 합니다');
+assert.deepEqual(warnTypes(onTrack), []);
+assert.equal(onTrack.isDivergent, false);
+assert.deepEqual(warnTypes(judge('g_camp')), [], '+10h 는 기본 허용치 24h 이내');
+console.log('   ✅ 기본 궤도: 제단 직행·야영지 우회(+10h) 모두 경고 없음');
+
+// 10-2. 탈선 경고: 항구(+30h > 24h)
+const offTrack = judge('g_port');
+assert.equal(offTrack.isDivergent, true);
+assert.equal(offTrack.guardrailWarnings.length, 1);
+const div = offTrack.guardrailWarnings[0];
+assert.equal(div.type, 'TRAJECTORY_DIVERGENCE');
+assert.equal(div.severity, 'medium');
+assert.equal(div.milestone, 'g_altar');
+assert.equal(div.addedHours, 30);
+console.log(`   ✅ 탈선 경고: 항구행 ${div.type}(${div.severity}), 경유지 이동 +${div.addedHours}h`);
+
+// 10-3. 경계값: 우회 10h 기준, 허용치 10 이면 통과(초과만 경고), 9 면 경고
+assert.deepEqual(warnTypes(judge('g_camp', 10)), [], '허용치와 같으면 경고 없음 (> 비교)');
+const tight = judge('g_camp', 9);
+assert.deepEqual(warnTypes(tight), ['TRAJECTORY_DIVERGENCE']);
+assert.equal(tight.guardrailWarnings[0].addedHours, 10);
+console.log('   ✅ 경계값: 우회 10h 에서 허용치 10 통과, 허용치 9 경고');
+
+// 10-4. 도달 불가: 고립된 섬, 미등록 장소 (high, 즉시 반환)
+for (const dest of ['g_island', 'g_nowhere']) {
+  const r = judge(dest);
+  assert.equal(r.isDivergent, true);
+  assert.deepEqual(warnTypes(r), ['UNREACHABLE_DESTINATION']);
+  assert.equal(r.guardrailWarnings[0].severity, 'high');
+}
+console.log('   ✅ 도달 불가: 고립된 섬·미등록 장소 모두 UNREACHABLE_DESTINATION(high)');
+
+// 10-5. [알려진 결함] 현재 동작을 고정한다. 코드 수정 시 이 assert 가 실패하므로 테스트도 함께 갱신할 것
+const zeroTolerance = judge('g_camp', 0);
+assert.deepEqual(warnTypes(zeroTolerance), [], '[결함 1] 현재는 0 이 || 24 로 치환됨');
+const oneWay = judge('g_cliff');
+assert.deepEqual(warnTypes(oneWay), [], '[결함 2] 현재는 복귀 불가 목적지를 판정하지 않음');
+assert.equal(oneWay.isDivergent, false);
+console.log('\x1b[33m%s\x1b[0m', '   ⚠️ [알려진 결함 1] 허용치 0 지정 불가: maxAllowedDeviationHours 0 이 24 로 치환됨');
+console.log('\x1b[33m%s\x1b[0m', '   ⚠️ [알려진 결함 2] 일방통행 탈선 미감지: 절벽(복귀 경로 없음) 행이 경고 없이 통과됨');
+
 console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 4대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');
