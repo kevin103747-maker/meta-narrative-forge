@@ -10,6 +10,7 @@ const CONSTITUTION_REL = 'system/CONSTITUTION.md';
 const GOVERNANCE_FILES = [
   'meta/scripts/audit.js',
   'meta/scripts/freeze.js',
+  'meta/scripts/unfreeze.js',
   'meta/scripts/ratify.js',
   'meta/contracts/module-contract.template.json',
   'package.json'
@@ -38,7 +39,7 @@ function parseArgs(argv) {
 function ratify() {
   const { approvedBy, reason = '' } = parseArgs(process.argv.slice(2));
   if (!approvedBy || !approvedBy.trim() || approvedBy.startsWith('--')) {
-    fail('승인자를 지정하십시오. 예: npm run ratify -- --approved-by kevin --reason "T1 거버넌스 패치"');
+    fail('승인자를 지정하십시오. 예: npm run ratify -- --approved-by kevin --reason "개정 사유"');
   }
   if (!fs.existsSync(LEDGER_PATH)) fail('동결 장부가 없습니다: meta/ledger/registry-state.json');
 
@@ -88,10 +89,12 @@ function ratify() {
     changes
   };
 
+  // frozen_modules / superseded_modules 는 절대 건드리지 않는다
   const nextLedger = {
     system_constitution_hash: constitutionHash,
     governance_files: nextGov,
     frozen_modules: ledger.frozen_modules || {},
+    superseded_modules: ledger.superseded_modules || [],
     ratification_log: [...(ledger.ratification_log || []), entry]
   };
   for (const [k, v] of Object.entries(ledger)) {

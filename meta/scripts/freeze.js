@@ -23,6 +23,18 @@ function runAudit(stage) {
   return result.status === 0;
 }
 
+function parseSemver(v) {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(v ?? ''));
+  return m ? m.slice(1).map(Number) : null;
+}
+
+function cmpSemver(a, b) {
+  for (let i = 0; i < 3; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return 0;
+}
+
 function freezeModule(moduleName) {
   if (!moduleName) fail('동결할 모듈 이름을 지정하십시오. 예: npm run freeze schema-factory');
   if (!/^[a-z0-9][a-z0-9-]*$/.test(moduleName)) {
@@ -42,12 +54,14 @@ function freezeModule(moduleName) {
   const contract = JSON.parse(contractRaw);
   ledger.frozen_modules = ledger.frozen_modules || {};
 
+  // [안전장치] 재동결 거부
   const prefix = `builders/${moduleName}/`;
   const alreadyLocked = Object.keys(ledger.frozen_modules).some(k => k.startsWith(prefix));
   if (contract.status === 'FROZEN' || alreadyLocked) {
-    fail(`[${moduleName}] 은(는) 이미 동결되어 있습니다. 재동결은 허용되지 않습니다. 수정이 필요하면 헌법에 정의된 동결 해제 절차를 따르십시오.`);
+    fail(`[${moduleName}] 은(는) 이미 동결되어 있습니다. 재동결은 허용되지 않습니다. 수정이 필요하면 npm run unfreeze 절차(헌법 제6조)를 따르십시오.`);
   }
 
+  // [안전장치] 동결 순서: 의존 모듈이 모두 FROZEN 이어야 한다
   for (const raw of contract.dependencies?.internal_modules || []) {
     const depName = String(raw).replace(/^@\//, '').replace(/\/+$/, '').replace(/^builders\//, '');
     let depStatus = null;
@@ -56,6 +70,20 @@ function freezeModule(moduleName) {
     } catch { /* 존재하지 않으면 null */ }
     if (depStatus !== 'FROZEN') {
       fail(`의존 모듈이 아직 동결되지 않았습니다: builders/${depName} (status: ${depStatus ?? '없음'}). 의존 모듈을 먼저 동결하십시오.`);
+    }
+  }
+
+  // [안전장치] 버전 증가 강제 (헌법 제6조 4항)
+  const cur = parseSemver(contract.version);
+  if (!cur) fail(`계약서 version 형식 오류: '${contract.version}' (형식: x.y.z)`);
+  const history = (Array.isArray(ledger.superseded_modules) ? ledger.superseded_modules : [])
+    .filter(e => e && e.module === moduleName)
+    .map(e => ({ raw: e.version, v: parseSemver(e.version) }))
+    .filter(e => e.v);
+  if (history.length > 0) {
+    const highest = history.reduce((a, b) => (cmpSemver(a.v, b.v) >= 0 ? a : b));
+    if (cmpSemver(cur, highest.v) <= 0) {
+      fail(`버전을 올려야 합니다: 현재 ${contract.version}, 폐기된 최고 버전 ${highest.raw} (헌법 제6조 4항)`);
     }
   }
 

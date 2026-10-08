@@ -5,6 +5,7 @@
   "scripts": {
     "audit": "node meta/scripts/audit.js",
     "freeze": "node meta/scripts/freeze.js",
+    "unfreeze": "node meta/scripts/unfreeze.js",
     "ratify": "node meta/scripts/ratify.js",
     "test:smoke": "node tests/smoke-test.js"
   }

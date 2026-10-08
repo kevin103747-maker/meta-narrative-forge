@@ -1,11 +1,12 @@
 {
-  "system_constitution_hash": "e3bc9c0b59dc4309818ff3737d9f7e920a5dba72820bb5e693e0d6ec7939ba00",
+  "system_constitution_hash": "06cc8ee10f785d9f02d34edee660f7e16b48f8066b8be2b2fde8ff16bdcd3549",
   "governance_files": {
-    "meta/scripts/audit.js": "0be7fcece32470ea5fec91b25b6a191c1a7440b79736089d87b51fa1f280be8b",
-    "meta/scripts/freeze.js": "367705360fc92cc47561b817db6d61b8803080f26114c7edc14b7838df21dc74",
-    "meta/scripts/ratify.js": "d47fee9b64878d587f5440930955de1edebd5fa9c0cd8be4010208a4685f5e55",
+    "meta/scripts/audit.js": "7cf90f4560b18436fe0b6f1e473d2d7748142fd55f00686ce1bf54fe70d8d16e",
+    "meta/scripts/freeze.js": "5dc48a02beda6e1cfc523c411d75b600aec258be4d9b6f2e47f25f763ef139a3",
+    "meta/scripts/unfreeze.js": "3e23cd2448b4be594118e9d33694cbcc2d9e741ae48af3ac79ad66d80d15096a",
+    "meta/scripts/ratify.js": "303016565af53b806fa2b53eac890309d849df9aafb1f037705a19062be6dcd7",
     "meta/contracts/module-contract.template.json": "9e6ece2b9def37eb0707a8ab9c6d35e3f9c47155536dfcbb07bcbedf6c72b5fd",
-    "package.json": "426b48d64eecb09cdda4f6a30f57e0558b32f8847e06802f1314fcadcd9f9831"
+    "package.json": "29420e69b1f822591f447e35bfbcb3c81c110ba4ea57133f464046d49fcff584"
   },
   "frozen_modules": {
     "builders/schema-factory/contract.json": "20bcba512341f50f7c5a2674bbe37f2af259a986ebe2050ac6e00dc237000ee8",
@@ -23,6 +24,7 @@
     "builders/runtime-orchestrator/index.js": "d7e18d4e2a2d28c3a213a66e26cc30804211900d946745b4a9d75bf0c275bc45",
     "builders/runtime-orchestrator/simulation-tick.js": "0de6a673cfe41d51463338e5919b5c6668b91badf72919401659bc5bdb0b4d4d"
   },
+  "superseded_modules": [],
   "ratification_log": [
     {
       "ratified_at": "2026-10-08T03:02:08.992Z",
@@ -53,6 +55,43 @@
           "file": "package.json",
           "from": null,
           "to": "426b48d64eecb09cdda4f6a30f57e0558b32f8847e06802f1314fcadcd9f9831"
+        }
+      ]
+    },
+    {
+      "ratified_at": "2026-10-08T03:16:25.424Z",
+      "approved_by": "kevin",
+      "reason": "T2a: 제4조 3항, 제6조(연쇄 해제) 신설 및 unfreeze 도구",
+      "changes": [
+        {
+          "file": "system/CONSTITUTION.md",
+          "from": "e3bc9c0b59dc4309818ff3737d9f7e920a5dba72820bb5e693e0d6ec7939ba00",
+          "to": "06cc8ee10f785d9f02d34edee660f7e16b48f8066b8be2b2fde8ff16bdcd3549"
+        },
+        {
+          "file": "meta/scripts/audit.js",
+          "from": "0be7fcece32470ea5fec91b25b6a191c1a7440b79736089d87b51fa1f280be8b",
+          "to": "7cf90f4560b18436fe0b6f1e473d2d7748142fd55f00686ce1bf54fe70d8d16e"
+        },
+        {
+          "file": "meta/scripts/freeze.js",
+          "from": "367705360fc92cc47561b817db6d61b8803080f26114c7edc14b7838df21dc74",
+          "to": "5dc48a02beda6e1cfc523c411d75b600aec258be4d9b6f2e47f25f763ef139a3"
+        },
+        {
+          "file": "meta/scripts/unfreeze.js",
+          "from": null,
+          "to": "3e23cd2448b4be594118e9d33694cbcc2d9e741ae48af3ac79ad66d80d15096a"
+        },
+        {
+          "file": "meta/scripts/ratify.js",
+          "from": "d47fee9b64878d587f5440930955de1edebd5fa9c0cd8be4010208a4685f5e55",
+          "to": "303016565af53b806fa2b53eac890309d849df9aafb1f037705a19062be6dcd7"
+        },
+        {
+          "file": "package.json",
+          "from": "426b48d64eecb09cdda4f6a30f57e0558b32f8847e06802f1314fcadcd9f9831",
+          "to": "29420e69b1f822591f447e35bfbcb3c81c110ba4ea57133f464046d49fcff584"
         }
       ]
     }

@@ -12,11 +12,14 @@ const BUILDERS_DIR = path.join(ROOT_DIR, 'builders');
 const GOVERNANCE_FILES = [
   'meta/scripts/audit.js',
   'meta/scripts/freeze.js',
+  'meta/scripts/unfreeze.js',
   'meta/scripts/ratify.js',
   'meta/contracts/module-contract.template.json',
   'package.json'
 ];
 
+const VALID_STATUSES = ['DRAFT', 'FROZEN'];
+const HEX64 = /^[0-9a-f]{64}$/;
 const BUILTINS = new Set(builtinModules);
 
 const IMPORT_PATTERNS = [
@@ -57,22 +60,24 @@ function extractSpecifiers(source) {
   return [...specs];
 }
 
-function auditLedger(errors) {
+function loadLedger(errors) {
+  if (!fs.existsSync(LEDGER_PATH)) {
+    errors.push('CRITICAL: meta/ledger/registry-state.json (동결 장부)가 누락되었습니다.');
+    return null;
+  }
+  try {
+    return readJson(LEDGER_PATH);
+  } catch (e) {
+    errors.push(`PARSER ERROR: registry-state.json 파싱 실패: ${e.message}`);
+    return null;
+  }
+}
+
+function auditLedger(ledger, errors) {
   if (!fs.existsSync(CONSTITUTION_PATH)) {
     errors.push('CRITICAL: system/CONSTITUTION.md (헌법) 파일이 누락되었습니다.');
   }
-  if (!fs.existsSync(LEDGER_PATH)) {
-    errors.push('CRITICAL: meta/ledger/registry-state.json (동결 장부)가 누락되었습니다.');
-    return;
-  }
-
-  let ledger;
-  try {
-    ledger = readJson(LEDGER_PATH);
-  } catch (e) {
-    errors.push(`PARSER ERROR: registry-state.json 파싱 실패: ${e.message}`);
-    return;
-  }
+  if (!ledger) return;
 
   const constitutionHash = getFileHash(CONSTITUTION_PATH);
   if (constitutionHash) {
@@ -114,6 +119,39 @@ function auditLedger(errors) {
       }
     }
   }
+
+  // 폐기 기록 형식 검사 (해시는 과거 값이므로 실제 파일과 대조하지 않음)
+  const sup = ledger.superseded_modules;
+  if (sup !== undefined) {
+    if (!Array.isArray(sup)) {
+      errors.push('LEDGER INVALID: superseded_modules 는 배열이어야 합니다.');
+    } else {
+      sup.forEach((entry, i) => {
+        const tag = `superseded_modules[${i}]`;
+        if (!entry || typeof entry !== 'object') {
+          errors.push(`LEDGER INVALID: ${tag} 형식 오류`);
+          return;
+        }
+        for (const f of ['module', 'unfrozen_at', 'approved_by', 'reason']) {
+          if (typeof entry[f] !== 'string' || !entry[f].trim()) {
+            errors.push(`LEDGER INVALID: ${tag}.${f} 누락 또는 빈 값`);
+          }
+        }
+        if (!entry.files || typeof entry.files !== 'object' || Object.keys(entry.files).length === 0) {
+          errors.push(`LEDGER INVALID: ${tag}.files 누락 또는 빈 값`);
+        } else {
+          for (const [k, v] of Object.entries(entry.files)) {
+            if (!k.startsWith(`builders/${entry.module}/`)) {
+              errors.push(`LEDGER INVALID: ${tag}.files 경로가 모듈과 불일치 -> ${k}`);
+            }
+            if (typeof v !== 'string' || !HEX64.test(v)) {
+              errors.push(`LEDGER INVALID: ${tag}.files 해시 형식 오류 -> ${k}`);
+            }
+          }
+        }
+      });
+    }
+  }
 }
 
 function loadContracts(errors) {
@@ -149,6 +187,10 @@ function auditContractShape(folderName, contract, errors) {
     }
   }
 
+  if (contract.status && !VALID_STATUSES.includes(contract.status)) {
+    errors.push(`CONTRACT INVALID: [${folderName}] 허용되지 않은 status -> '${contract.status}' (허용: ${VALID_STATUSES.join(', ')})`);
+  }
+
   if (contract.scope && Array.isArray(contract.scope.target_files)) {
     const declaredFiles = new Set(contract.scope.target_files.map(f => path.normalize(f)));
     declaredFiles.add(path.normalize(`builders/${folderName}/contract.json`));
@@ -160,6 +202,29 @@ function auditContractShape(folderName, contract, errors) {
       if (!declaredFiles.has(file)) {
         errors.push(`SCOPE LEAK: [${folderName}] 선언되지 않은 미확인 파일 발견 -> ${file}`);
       }
+    }
+  }
+}
+
+// 계약서 status 와 장부 동결 해시의 일관성
+function auditFreezeState(folderName, contract, ledger, errors) {
+  if (!ledger) return;
+  const frozen = ledger.frozen_modules || {};
+  const prefix = `builders/${folderName}/`;
+
+  if (contract.status === 'FROZEN') {
+    const files = fs.readdirSync(path.join(BUILDERS_DIR, folderName), { withFileTypes: true })
+      .filter(d => d.isFile())
+      .map(d => prefix + d.name);
+    for (const f of files) {
+      if (!(f in frozen)) {
+        errors.push(`FREEZE STATE MISMATCH: [${folderName}] FROZEN 모듈의 파일이 장부에 없음 -> ${f}`);
+      }
+    }
+  } else {
+    const locked = Object.keys(frozen).filter(k => k.startsWith(prefix));
+    if (locked.length > 0) {
+      errors.push(`FREEZE STATE MISMATCH: [${folderName}] status 가 '${contract.status}' 인데 장부에 동결 해시 ${locked.length}개가 남아 있음`);
     }
   }
 }
@@ -253,11 +318,12 @@ function auditImports(folderName, contract, declaredModules, errors) {
   }
 }
 
-function auditModules(errors) {
+function auditModules(ledger, errors) {
   const contracts = loadContracts(errors);
   for (const [folderName, contract] of contracts) {
     if (!contract) continue;
     auditContractShape(folderName, contract, errors);
+    auditFreezeState(folderName, contract, ledger, errors);
     const declaredModules = auditDependencies(folderName, contract, contracts, errors);
     auditImports(folderName, contract, declaredModules, errors);
   }
@@ -267,8 +333,9 @@ function runAudit() {
   console.log('\x1b[36m%s\x1b[0m', '>>> [meta-narrative-forge] 정적 무결성 감사 시작...');
   const errors = [];
 
-  auditLedger(errors);
-  auditModules(errors);
+  const ledger = loadLedger(errors);
+  auditLedger(ledger, errors);
+  auditModules(ledger, errors);
 
   console.log('--------------------------------------------------');
   if (errors.length > 0) {
