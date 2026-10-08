@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { WorldGraphBuilder } from '../builders/world-graph-builder/index.js';
 import { NarrativeLogicCompiler } from '../builders/narrative-logic-compiler/index.js';
 import { RuntimeOrchestrator } from '../builders/runtime-orchestrator/index.js';
+import { GlobalClock } from '../builders/global-clock/index.js';
 
 console.log('\x1b[35m%s\x1b[0m', '==================================================');
-console.log('\x1b[35m%s\x1b[0m', '🚀 [meta-narrative-forge] 4대 코어 빌더 통합 구동 테스트');
+console.log('\x1b[35m%s\x1b[0m', '🚀 [meta-narrative-forge] 5대 코어 빌더 통합 구동 테스트');
 console.log('\x1b[35m%s\x1b[0m', '==================================================\n');
 
 // 1. 전술판(WorldGraphBuilder) 구축
@@ -389,4 +390,70 @@ assert.deepEqual(warnTypes(oneWay), ['ONE_WAY_TRAP'], '일방통행 목적지는
 assert.equal(oneWay.isDivergent, true);
 console.log('   ✅ 결함 수정: 허용치 0 지정 가능, 일방통행 탈선 감지(ONE_WAY_TRAP)');
 
-console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 4대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');
+// 11. [T4] Global Clock: 다중 캐릭터 시뮬레이션을 위한 글로벌 시계
+console.log('\n⏰ 11. [T4] Global Clock: 글로벌 시계, 로컬 시간, 스냅샷 검증...');
+
+const clock = new GlobalClock();
+
+// 11-1. 기본 초기화 및 틱 전진
+clock.initialize({ startHour: 0, tickDurationHours: 1 });
+assert.equal(clock.getCurrentTime(), 0, '초기 시간은 0이어야 합니다');
+clock.advance(5);
+assert.equal(clock.getCurrentTime(), 5, '5틱 전진 후 5시간이어야 합니다');
+console.log('   ✅ 기본 초기화 및 틱 전진: 0시간 → 5시간');
+
+// 11-2. 캐릭터 등록 및 로컬 시간
+clock.registerCharacter('char_hero_01');
+clock.registerCharacter('char_rogue_02');
+assert.equal(clock.getLocalTime('char_hero_01'), 5, '등록 시점 현재 글로벌 시간으로 초기화');
+assert.equal(clock.getLocalTime('char_rogue_02'), 5, '등록 시점 현재 글로벌 시간으로 초기화');
+console.log('   ✅ 캐릭터 등록: 로컬 시간이 글로벌 시간과 동기화');
+
+// 11-3. 로컬 시간 조정 (이동/행동 시 사용)
+clock.adjustLocalTime('char_hero_01', 2); // 에단은 2시간 추가 경험 (이동 중)
+assert.equal(clock.getLocalTime('char_hero_01'), 7, '로컬 시간 조정 후 7시간');
+assert.equal(clock.getLocalTime('char_rogue_02'), 5, '다른 캐릭터 시간은 변화 없음');
+assert.equal(clock.getTimeDivergence('char_hero_01'), 2, '시간 왜곡도 2시간');
+assert.equal(clock.getTimeDivergence('char_rogue_02'), 0, '다른 캐릭터 시간 왜곡도 0');
+console.log('   ✅ 로컬 시간 조정: 에단 +2시간, 로웬 변화 없음, 왜곡도 계산');
+
+// 11-4. 틱 전진 시 모든 캐릭터 로컬 시간도 전진
+clock.advance(3);
+assert.equal(clock.getCurrentTime(), 8, '글로벌 시간 8시간');
+assert.equal(clock.getLocalTime('char_hero_01'), 10, '에단 로컬 시간 10시간 (7 + 3)');
+assert.equal(clock.getLocalTime('char_rogue_02'), 8, '로웬 로컬 시간 8시간 (5 + 3)');
+console.log('   ✅ 틱 전진: 글로벌 8시간, 에단 10시간, 로웬 8시간');
+
+// 11-5. 스냅샷 생성 및 복원
+const snapId = clock.createSnapshot('before_battle');
+const snapshot = clock.listSnapshots()[0];
+assert.equal(snapshot.id, snapId, '스냅샷 ID 일치');
+assert.equal(snapshot.globalTime, 8, '스냅샷 시간 8시간');
+console.log('   ✅ 스냅샷 생성: before_battle 라벨로 저장');
+
+clock.advance(10);
+assert.equal(clock.getCurrentTime(), 18, '전진 후 18시간');
+clock.restoreSnapshot(snapId);
+assert.equal(clock.getCurrentTime(), 8, '복원 후 8시간');
+assert.equal(clock.getLocalTime('char_hero_01'), 10, '에단 로컬 시간도 복원');
+console.log('   ✅ 스냅샷 복원: 18시간 → 8시간으로 되돌아감');
+
+// 11-6. 거부 경로
+assert.throws(() => clock.registerCharacter('char_hero_01'), Error, '중복 등록 거부');
+assert.throws(() => clock.advance(-1), RangeError, '음수 틱 거부');
+assert.throws(() => clock.adjustLocalTime('char_unknown', 1), Error, '미등록 캐릭터 조정 거부');
+assert.throws(() => clock.adjustLocalTime('char_hero_01', -100), RangeError, '음수 로컬 시간 거부');
+assert.throws(() => clock.restoreSnapshot('unknown'), Error, '존재하지 않는 스냅샷 복원 거부');
+console.log('   ✅ 거부 경로 5종: 중복 등록, 음수 틱, 미등록 조정, 음수 로컬 시간, 존재하지 않는 스냅샷');
+
+// 11-7. 상태 내보내기/가져오기
+const exported = clock.exportState();
+assert.equal(exported.globalTime, 8);
+assert.equal(exported.characters.length, 2);
+const newClock = new GlobalClock();
+newClock.importState(exported);
+assert.equal(newClock.getCurrentTime(), 8);
+assert.equal(newClock.getLocalTime('char_hero_01'), 10);
+console.log('   ✅ 상태 내보내기/가져오기: 직렬화/역직렬화 완료');
+
+console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 5대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');

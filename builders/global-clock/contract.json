@@ -1,0 +1,35 @@
+{
+  "$schema": "meta/contracts/module-contract.template.json",
+  "module_name": "global-clock",
+  "version": "0.1.0",
+  "status": "FROZEN",
+  "scope": {
+    "purpose": "다중 캐릭터 시뮬레이션을 위한 글로벌 시계를 관리한다. 절대 시간을 추적하고, 틱 기반 시뮬레이션을 지원하며, 각 캐릭터의 로컬 시간(이동/행동에 따른 차이)을 관리한다.",
+    "target_files": [
+      "builders/global-clock/index.js"
+    ]
+  },
+  "interfaces": {
+    "inputs": {
+      "initialize(config)": "{ startHour: number, tickDurationHours: number } - 시계 초기화",
+      "advance(ticks)": "지정된 틱 수만큼 시간 전진",
+      "registerCharacter(characterId)": "캐릭터 등록 (로컬 시간 추적 시작)",
+      "adjustLocalTime(characterId, deltaHours)": "캐릭터의 로컬 시간 수동 조정 (이동/행동 시 사용)",
+      "getCurrentTime()": "현재 글로벌 시간 반환",
+      "getLocalTime(characterId)": "캐릭터의 로컬 시간 반환",
+      "getElapsedTime(characterId)": "캐릭터가 경험한 총 시간 반환",
+      "createSnapshot(label)": "현재 시간 상태 스냅샷 생성",
+      "restoreSnapshot(snapshotId)": "스냅샷으로 시간 상태 복원"
+    },
+    "outputs": {
+      "globalTime": "number - 현재 글로벌 시간 (시간 단위)",
+      "localTime": "number - 캐릭터별 로컬 시간 (시간 단위)",
+      "snapshot": "{ id, label, globalTime, localTimes, timestamp } - 시간 상태 스냅샷"
+    }
+  },
+  "dependencies": {
+    "internal_modules": [],
+    "allowed_external_pkgs": []
+  },
+  "frozen_at": "2026-10-08T06:49:47.540Z"
+}
