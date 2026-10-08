@@ -1,5 +1,12 @@
 {
   "system_constitution_hash": "e3bc9c0b59dc4309818ff3737d9f7e920a5dba72820bb5e693e0d6ec7939ba00",
+  "governance_files": {
+    "meta/scripts/audit.js": "0be7fcece32470ea5fec91b25b6a191c1a7440b79736089d87b51fa1f280be8b",
+    "meta/scripts/freeze.js": "367705360fc92cc47561b817db6d61b8803080f26114c7edc14b7838df21dc74",
+    "meta/scripts/ratify.js": "d47fee9b64878d587f5440930955de1edebd5fa9c0cd8be4010208a4685f5e55",
+    "meta/contracts/module-contract.template.json": "9e6ece2b9def37eb0707a8ab9c6d35e3f9c47155536dfcbb07bcbedf6c72b5fd",
+    "package.json": "426b48d64eecb09cdda4f6a30f57e0558b32f8847e06802f1314fcadcd9f9831"
+  },
   "frozen_modules": {
     "builders/schema-factory/contract.json": "20bcba512341f50f7c5a2674bbe37f2af259a986ebe2050ac6e00dc237000ee8",
     "builders/schema-factory/index.js": "6ef4b97259bac63683bbcae4440cf2454f206c1b98dacd355f0bfa0f4b503c47",
@@ -15,5 +22,39 @@
     "builders/runtime-orchestrator/contract.json": "a1e741ede1c4e3b208ce02ab02eba90f87a2e7f3cd5bc090fb2d7a20043a3272",
     "builders/runtime-orchestrator/index.js": "d7e18d4e2a2d28c3a213a66e26cc30804211900d946745b4a9d75bf0c275bc45",
     "builders/runtime-orchestrator/simulation-tick.js": "0de6a673cfe41d51463338e5919b5c6668b91badf72919401659bc5bdb0b4d4d"
-  }
+  },
+  "ratification_log": [
+    {
+      "ratified_at": "2026-10-08T03:02:08.992Z",
+      "approved_by": "kevin",
+      "reason": "T1 governance hardening",
+      "changes": [
+        {
+          "file": "meta/scripts/audit.js",
+          "from": null,
+          "to": "0be7fcece32470ea5fec91b25b6a191c1a7440b79736089d87b51fa1f280be8b"
+        },
+        {
+          "file": "meta/scripts/freeze.js",
+          "from": null,
+          "to": "367705360fc92cc47561b817db6d61b8803080f26114c7edc14b7838df21dc74"
+        },
+        {
+          "file": "meta/scripts/ratify.js",
+          "from": null,
+          "to": "d47fee9b64878d587f5440930955de1edebd5fa9c0cd8be4010208a4685f5e55"
+        },
+        {
+          "file": "meta/contracts/module-contract.template.json",
+          "from": null,
+          "to": "9e6ece2b9def37eb0707a8ab9c6d35e3f9c47155536dfcbb07bcbedf6c72b5fd"
+        },
+        {
+          "file": "package.json",
+          "from": null,
+          "to": "426b48d64eecb09cdda4f6a30f57e0558b32f8847e06802f1314fcadcd9f9831"
+        }
+      ]
+    }
+  ]
 }

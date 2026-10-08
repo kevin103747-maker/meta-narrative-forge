@@ -1,74 +1,99 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 const ROOT_DIR = process.cwd();
 const LEDGER_PATH = path.join(ROOT_DIR, 'meta', 'ledger', 'registry-state.json');
-const CONSTITUTION_PATH = path.join(ROOT_DIR, 'system', 'CONSTITUTION.md');
 const BUILDERS_DIR = path.join(ROOT_DIR, 'builders');
+const AUDIT_SCRIPT = path.join(ROOT_DIR, 'meta', 'scripts', 'audit.js');
 
 function getFileHash(filePath) {
-  const buffer = fs.readFileSync(filePath);
-  return crypto.createHash('sha256').update(buffer).digest('hex');
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function fail(msg) {
+  console.error('\x1b[31m%s\x1b[0m', `❌ 에러: ${msg}`);
+  process.exit(1);
+}
+
+function runAudit(stage) {
+  console.log('\x1b[36m%s\x1b[0m', `>>> [freeze] ${stage} 감사 실행...`);
+  const result = spawnSync(process.execPath, [AUDIT_SCRIPT], { cwd: ROOT_DIR, stdio: 'inherit' });
+  return result.status === 0;
 }
 
 function freezeModule(moduleName) {
-  if (!moduleName) {
-    console.error('\x1b[31m%s\x1b[0m', '❌ 에러: 동결할 모듈 이름을 지정하십시오. 예: npm run freeze schema-factory');
-    process.exit(1);
+  if (!moduleName) fail('동결할 모듈 이름을 지정하십시오. 예: npm run freeze schema-factory');
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(moduleName)) {
+    fail(`모듈 이름 형식 오류: '${moduleName}' (소문자, 숫자, 하이픈만 허용)`);
   }
 
   const modulePath = path.join(BUILDERS_DIR, moduleName);
   const contractPath = path.join(modulePath, 'contract.json');
+  if (!fs.existsSync(modulePath)) fail(`모듈 디렉터리를 찾을 수 없습니다: builders/${moduleName}`);
+  if (!fs.existsSync(contractPath)) fail(`contract.json 계약서가 없습니다: builders/${moduleName}/contract.json`);
 
-  if (!fs.existsSync(modulePath)) {
-    console.error('\x1b[31m%s\x1b[0m', `❌ 에러: 모듈 디렉터리를 찾을 수 없습니다: builders/${moduleName}`);
-    process.exit(1);
-  }
+  if (!runAudit('사전')) fail('사전 감사 실패. 동결을 중단합니다.');
 
-  if (!fs.existsSync(contractPath)) {
-    console.error('\x1b[31m%s\x1b[0m', `❌ 에러: contract.json 계약서가 없습니다: builders/${moduleName}/contract.json`);
-    process.exit(1);
-  }
-
-  // 1. 장부 로드
-  const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, 'utf-8'));
+  const ledgerRaw = fs.readFileSync(LEDGER_PATH, 'utf-8');
+  const contractRaw = fs.readFileSync(contractPath, 'utf-8');
+  const ledger = JSON.parse(ledgerRaw);
+  const contract = JSON.parse(contractRaw);
   ledger.frozen_modules = ledger.frozen_modules || {};
 
-  // 2. 헌법 해시 최신화
-  if (fs.existsSync(CONSTITUTION_PATH)) {
-    ledger.system_constitution_hash = getFileHash(CONSTITUTION_PATH);
+  const prefix = `builders/${moduleName}/`;
+  const alreadyLocked = Object.keys(ledger.frozen_modules).some(k => k.startsWith(prefix));
+  if (contract.status === 'FROZEN' || alreadyLocked) {
+    fail(`[${moduleName}] 은(는) 이미 동결되어 있습니다. 재동결은 허용되지 않습니다. 수정이 필요하면 헌법에 정의된 동결 해제 절차를 따르십시오.`);
   }
 
-  // 3. 모듈 파일 순회 및 해시 등록
-  const files = fs.readdirSync(modulePath);
-  for (const file of files) {
-    const relPath = path.posix.join('builders', moduleName, file);
-    const absPath = path.join(modulePath, file);
+  for (const raw of contract.dependencies?.internal_modules || []) {
+    const depName = String(raw).replace(/^@\//, '').replace(/\/+$/, '').replace(/^builders\//, '');
+    let depStatus = null;
+    try {
+      depStatus = JSON.parse(fs.readFileSync(path.join(BUILDERS_DIR, depName, 'contract.json'), 'utf-8')).status;
+    } catch { /* 존재하지 않으면 null */ }
+    if (depStatus !== 'FROZEN') {
+      fail(`의존 모듈이 아직 동결되지 않았습니다: builders/${depName} (status: ${depStatus ?? '없음'}). 의존 모듈을 먼저 동결하십시오.`);
+    }
+  }
 
-    if (fs.statSync(absPath).isFile()) {
+  const rollback = () => {
+    fs.writeFileSync(LEDGER_PATH, ledgerRaw, 'utf-8');
+    fs.writeFileSync(contractPath, contractRaw, 'utf-8');
+  };
+
+  try {
+    for (const file of fs.readdirSync(modulePath)) {
+      const absPath = path.join(modulePath, file);
+      if (!fs.statSync(absPath).isFile() || file === 'contract.json') continue;
+      const relPath = path.posix.join('builders', moduleName, file);
       const hash = getFileHash(absPath);
       ledger.frozen_modules[relPath] = hash;
       console.log(`🔒 [LOCKED] ${relPath} -> ${hash.substring(0, 8)}...`);
     }
+
+    contract.status = 'FROZEN';
+    contract.frozen_at = new Date().toISOString();
+    fs.writeFileSync(contractPath, JSON.stringify(contract, null, 2), 'utf-8');
+    const contractRelPath = path.posix.join('builders', moduleName, 'contract.json');
+    ledger.frozen_modules[contractRelPath] = getFileHash(contractPath);
+    console.log(`🔒 [LOCKED] ${contractRelPath} -> ${ledger.frozen_modules[contractRelPath].substring(0, 8)}...`);
+
+    fs.writeFileSync(LEDGER_PATH, JSON.stringify(ledger, null, 2), 'utf-8');
+  } catch (e) {
+    rollback();
+    fail(`동결 중 예외 발생, 원상 복구함: ${e.message}`);
   }
 
-  // 4. contract.json 상태를 FROZEN으로 변경
-  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf-8'));
-  contract.status = 'FROZEN';
-  contract.frozen_at = new Date().toISOString();
-  fs.writeFileSync(contractPath, JSON.stringify(contract, null, 2), 'utf-8');
-
-  // 계약서 자체의 해시도 갱신된 내용으로 다시 기록
-  const contractRelPath = path.posix.join('builders', moduleName, 'contract.json');
-  ledger.frozen_modules[contractRelPath] = getFileHash(contractPath);
-
-  // 5. 장부 영구 저장
-  fs.writeFileSync(LEDGER_PATH, JSON.stringify(ledger, null, 2), 'utf-8');
+  if (!runAudit('사후')) {
+    rollback();
+    fail('사후 감사 실패. 장부와 계약서를 동결 이전 상태로 복구했습니다.');
+  }
 
   console.log('--------------------------------------------------');
   console.log('\x1b[32m%s\x1b[0m', `✅ [${moduleName}] 모듈이 성공적으로 동결(FROZEN)되었습니다. 장부에 해시가 기록되었습니다.`);
 }
 
-const targetModule = process.argv[2];
-freezeModule(targetModule);
+freezeModule(process.argv[2]);
