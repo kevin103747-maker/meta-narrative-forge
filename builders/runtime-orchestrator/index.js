@@ -9,6 +9,7 @@ export class RuntimeOrchestrator {
     this.characters = new Map();
     this.currentSceneIndex = 0;
     this.elapsedHoursTotal = 0;
+    this.contextProviders = [];
   }
 
   registerCharacter(characterData) {
@@ -33,6 +34,20 @@ export class RuntimeOrchestrator {
     };
   }
 
+  // 거시 모듈이 동결 코드 수정 없이 씬 패킷에 정보를 주입하는 확장 슬롯 (등록 순서대로 실행)
+  registerContextProvider(name, fn, options = {}) {
+    const provider = ContextAssembler.createProvider(name, fn, options);
+    if (this.contextProviders.some(p => p.name === provider.name)) {
+      throw new Error(`[RuntimeOrchestrator] 이미 등록된 context provider 입니다: '${provider.name}'`);
+    }
+    this.contextProviders.push(provider);
+    return { name: provider.name, maxChars: provider.maxChars };
+  }
+
+  listContextProviders() {
+    return this.contextProviders.map(p => ({ name: p.name, maxChars: p.maxChars }));
+  }
+
   assemblePromptContext({ involvedCharacterIds, locationId }) {
     return ContextAssembler.assemble({
       characters: this.characters,
@@ -40,7 +55,8 @@ export class RuntimeOrchestrator {
       logicCompiler: this.logicCompiler,
       involvedCharacterIds,
       locationId,
-      currentSceneIndex: this.currentSceneIndex + 1
+      currentSceneIndex: this.currentSceneIndex + 1,
+      providers: this.contextProviders
     });
   }
 

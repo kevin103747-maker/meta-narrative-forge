@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { WorldGraphBuilder } from '../builders/world-graph-builder/index.js';
 import { NarrativeLogicCompiler } from '../builders/narrative-logic-compiler/index.js';
 import { RuntimeOrchestrator } from '../builders/runtime-orchestrator/index.js';
@@ -142,5 +143,88 @@ if (readiness.guardrailWarnings.length > 0) {
 } else {
   console.log('   ✅ 가드레일: 현재 이동 경로는 주 복선 회수 궤도와 일치합니다.');
 }
+
+// 9. [T2b] Context Provider 확장 슬롯 검증
+console.log('\n🧩 8. [T2b] Context Provider 확장 슬롯 검증...');
+
+function expectThrow(label, fn, ErrorType, fragment) {
+  let caught = null;
+  try { fn(); } catch (e) { caught = e; }
+  assert.ok(caught, `${label}: 예외가 발생해야 합니다`);
+  assert.ok(caught instanceof ErrorType, `${label}: ${ErrorType.name} 이어야 합니다 (실제: ${caught.constructor.name})`);
+  assert.ok(caught.message.includes(fragment), `${label}: 메시지에 '${fragment}' 포함 필요 (실제: ${caught.message})`);
+}
+
+function makeOrchestrator() {
+  const o = new RuntimeOrchestrator({ worldGraph: world, logicCompiler: logic });
+  o.registerCharacter(structuredClone(orchestrator.getCharacter('char_hero_01')));
+  return o;
+}
+
+const FULL_SETUP = { involvedCharacterIds: ['char_hero_01', 'char_rogue_02'], locationId: 'loc_tavern' };
+const HERO_SETUP = { involvedCharacterIds: ['char_hero_01'], locationId: 'loc_tavern' };
+
+// 8-1. 하위 호환 + 결정론
+const baseline = orchestrator.assemblePromptContext(FULL_SETUP);
+assert.deepEqual(baseline.extensions, {}, 'provider 미등록 시 extensions 는 빈 객체여야 합니다');
+assert.equal(orchestrator.listContextProviders().length, 0);
+
+orchestrator.registerContextProvider('known-facts', (input) => ({
+  lines: input.characters.flatMap(c => (c.known_facts || []).map(f => `${c.name} 앎: ${f}`)),
+  data: { count: input.characters.reduce((n, c) => n + (c.known_facts || []).length, 0) }
+}));
+
+const withExt = orchestrator.assemblePromptContext(FULL_SETUP);
+assert.ok(
+  withExt.systemInstruction.startsWith(baseline.systemInstruction + '\n[EXT:known-facts]\n'),
+  '기존 인스트럭션은 바이트 단위로 보존되고 확장 블록만 뒤에 붙어야 합니다'
+);
+assert.deepEqual(withExt.extensions['known-facts'].lines, ['에단 앎: 아버지가 숲 너머 제단에서 실종되었다는 소문']);
+assert.equal(withExt.extensions['known-facts'].data.count, 1);
+assert.equal(withExt.extensions._budget['known-facts'].mode, 'none');
+const again = orchestrator.assemblePromptContext(FULL_SETUP);
+assert.equal(JSON.stringify(again), JSON.stringify(withExt), '같은 상태에서는 같은 패킷이 나와야 합니다 (결정론)');
+console.log('   ✅ 하위 호환·결정론: 기존 인스트럭션 보존, known-facts 확장 1줄 주입, 재조립 결과 동일');
+
+// 8-2. 예산 절단
+const budgetOrch = makeOrchestrator();
+budgetOrch.registerContextProvider('overflow-soft', () => ({
+  lines: ['짧은 줄 하나', '두 번째 줄', '이 줄은 예산을 넘기게 되는 아주 긴 세 번째 줄입니다']
+}), { maxChars: 30 });
+budgetOrch.registerContextProvider('overflow-hard', () => ({
+  lines: ['ABCDEFGHIJKLMNOP']
+}), { maxChars: 10 });
+const budgetPacket = budgetOrch.assemblePromptContext(HERO_SETUP);
+const soft = budgetPacket.extensions._budget['overflow-soft'];
+const hard = budgetPacket.extensions._budget['overflow-hard'];
+assert.deepEqual(budgetPacket.extensions['overflow-soft'].lines, ['짧은 줄 하나', '두 번째 줄']);
+assert.deepEqual(soft, { maxChars: 30, usedChars: 14, totalLines: 3, keptLines: 2, mode: 'lines' });
+assert.deepEqual(budgetPacket.extensions['overflow-hard'].lines, ['ABCDEFGHI…']);
+assert.deepEqual(hard, { maxChars: 10, usedChars: 10, totalLines: 1, keptLines: 1, mode: 'hard' });
+assert.ok(budgetPacket.systemInstruction.endsWith('[EXT:overflow-hard]\nABCDEFGHI…'));
+console.log(`   ✅ 예산 절단: overflow-soft 줄 단위 ${soft.keptLines}/${soft.totalLines}줄(${soft.usedChars}/${soft.maxChars}자), overflow-hard 첫 줄 강제 절단(${hard.usedChars}/${hard.maxChars}자)`);
+
+// 8-3. 거부 경로 7종
+const ok = () => ({ lines: [] });
+const dupOrch = makeOrchestrator();
+dupOrch.registerContextProvider('known-facts', ok);
+expectThrow('중복 이름', () => dupOrch.registerContextProvider('known-facts', ok), Error, '이미 등록된');
+expectThrow('이름 형식', () => makeOrchestrator().registerContextProvider('Known_Facts', ok), TypeError, '이름 형식');
+expectThrow('async 금지', () => makeOrchestrator().registerContextProvider('async-provider', async () => ({ lines: [] })), TypeError, '동기 순수 함수');
+expectThrow('maxChars 하한', () => makeOrchestrator().registerContextProvider('tiny', ok, { maxChars: 9 }), RangeError, 'maxChars');
+
+const mutOrch = makeOrchestrator();
+mutOrch.registerContextProvider('mutator', (input) => { input.characters[0].physical.hp = 0; return { lines: [] }; });
+expectThrow('입력 변조', () => mutOrch.assemblePromptContext(HERO_SETUP), TypeError, "'mutator'");
+assert.equal(mutOrch.getCharacter('char_hero_01').physical.hp, orchestrator.getCharacter('char_hero_01').physical.hp, '변조 시도 후에도 원본 상태는 그대로여야 합니다');
+
+const badOrch = makeOrchestrator();
+badOrch.registerContextProvider('bad-shape', () => ({ lines: '한 줄' }));
+expectThrow('반환 형식', () => badOrch.assemblePromptContext(HERO_SETUP), TypeError, '반환 형식');
+
+const promiseOrch = makeOrchestrator();
+promiseOrch.registerContextProvider('sneaky-promise', () => Promise.resolve({ lines: [] }));
+expectThrow('Promise 반환', () => promiseOrch.assemblePromptContext(HERO_SETUP), TypeError, 'Promise');
+console.log('   ✅ 거부 경로 7종: 중복 이름, 이름 형식, async, maxChars 하한, 입력 변조, 반환 형식, Promise 반환');
 
 console.log('\n\x1b[32m%s\x1b[0m', '🎉 [SUCCESS] 4대 코어 빌더가 완벽한 인과관계로 연결되어 정상 구동됨을 입증했습니다.');
